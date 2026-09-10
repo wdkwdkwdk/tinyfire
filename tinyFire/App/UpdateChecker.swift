@@ -78,19 +78,28 @@ enum UpdateChecker {
         didPromptThisLaunch = true
 
         let notesKey = AppLanguage.notesKey
-        let notes =
+        var notes =
             info.notes?[notesKey]
             ?? info.notes?["en"]
             ?? ""
+        notes = notes.trimmingCharacters(in: .whitespacesAndNewlines)
 
         let alert = NSAlert()
         alert.messageText = L10n.t("update.title")
-        alert.informativeText = String(
-            format: L10n.t("update.message"),
-            info.version,
-            AppVersion.display,
-            notes
-        )
+        if notes.isEmpty {
+            alert.informativeText = String(
+                format: L10n.t("update.message.short"),
+                info.version,
+                AppVersion.display
+            )
+        } else {
+            alert.informativeText = String(
+                format: L10n.t("update.message"),
+                info.version,
+                AppVersion.display,
+                notes
+            )
+        }
         alert.alertStyle = .informational
         alert.addButton(withTitle: L10n.t("update.download"))
         alert.addButton(withTitle: L10n.t("update.later"))
@@ -104,17 +113,11 @@ enum UpdateChecker {
         }
     }
 
-    /// Prefer marketing version; fall back to build number when versions equal.
+    /// Prefer marketing version only (build is informational).
     static func isRemoteNewer(_ info: RemoteVersionInfo) -> Bool {
         let local = AppVersion.short
         let remote = info.version.trimmingCharacters(in: .whitespacesAndNewlines)
-        let cmp = compareVersions(remote, local)
-        if cmp == .orderedDescending { return true }
-        if cmp == .orderedAscending { return false }
-        guard let remoteBuild = info.build,
-              let localBuild = Int(AppVersion.build)
-        else { return false }
-        return remoteBuild > localBuild
+        return compareVersions(remote, local) == .orderedDescending
     }
 
     static func compareVersions(_ a: String, _ b: String) -> ComparisonResult {

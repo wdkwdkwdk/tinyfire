@@ -13,7 +13,8 @@ Nothing is uploaded for usage tracking. Logs stay on your Mac.
 
 | Version | macOS | Arch | Link |
 |--------|-------|------|------|
-| **1.1** | 14+ | Apple Silicon (arm64) | [TinyFire-1.1.dmg](https://github.com/wdkwdkwdk/tinyfire/releases/download/v1.1/TinyFire-1.1.dmg) |
+| **1.1.1** | 14+ | Apple Silicon (arm64) | [TinyFire-1.1.1.dmg](https://github.com/wdkwdkwdk/tinyfire/releases/download/v1.1.1/TinyFire-1.1.1.dmg) |
+| 1.1 | 14+ | Apple Silicon (arm64) | [TinyFire-1.1.dmg](https://github.com/wdkwdkwdk/tinyfire/releases/download/v1.1/TinyFire-1.1.dmg) |
 | 1.0 | 14+ | Apple Silicon (arm64) | [TinyFire-1.0.dmg](https://github.com/wdkwdkwdk/tinyfire/releases/download/v1.0/TinyFire-1.0.dmg) |
 
 **First launch:** right-click `TinyFire.app` → **Open** (the build is ad-hoc signed, not notarized).

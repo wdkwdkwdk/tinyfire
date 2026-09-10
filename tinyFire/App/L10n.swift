@@ -224,6 +224,7 @@ enum L10n {
         "hover.updated": "Updated %@",
         "update.title": "Update Available",
         "update.message": "TinyFire %@ is available.\nYou have %@.\n\n%@",
+        "update.message.short": "TinyFire %@ is available.\nYou have %@.",
         "update.later": "Later",
         "update.download": "Download",
     ]
@@ -303,6 +304,7 @@ enum L10n {
         "hover.updated": "%@ 更新",
         "update.title": "发现新版本",
         "update.message": "TinyFire %@ 已发布。\n当前版本 %@。\n\n%@",
+        "update.message.short": "TinyFire %@ 已发布。\n当前版本 %@。",
         "update.later": "稍后",
         "update.download": "去下载",
     ]
@@ -382,6 +384,7 @@ enum L10n {
         "hover.updated": "%@ 更新",
         "update.title": "アップデートがあります",
         "update.message": "TinyFire %@ が利用可能です。\n現在のバージョンは %@ です。\n\n%@",
+        "update.message.short": "TinyFire %@ が利用可能です。\n現在のバージョンは %@ です。",
         "update.later": "あとで",
         "update.download": "ダウンロード",
     ]
@@ -461,6 +464,7 @@ enum L10n {
         "hover.updated": "%@ 업데이트",
         "update.title": "업데이트 가능",
         "update.message": "TinyFire %@ 을(를) 사용할 수 있습니다.\n현재 버전은 %@ 입니다.\n\n%@",
+        "update.message.short": "TinyFire %@ 을(를) 사용할 수 있습니다.\n현재 버전은 %@ 입니다.",
         "update.later": "나중에",
         "update.download": "다운로드",
     ]
