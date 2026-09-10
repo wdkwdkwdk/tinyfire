@@ -39,6 +39,10 @@ enum UpdateChecker {
 
     @MainActor
     static func checkOnLaunch() {
+        #if DEBUG
+        // Xcode Debug builds must never nag — same bundle id as the release app.
+        return
+        #else
         guard endpoint != nil else { return }
         guard !didPromptThisLaunch else { return }
         Task.detached(priority: .utility) {
@@ -47,6 +51,7 @@ enum UpdateChecker {
                 presentIfNeeded(info)
             }
         }
+        #endif
     }
 
     private static func fetchRemote() async -> RemoteVersionInfo? {
