@@ -63,13 +63,13 @@ enum FirePreviewStyle: String, CaseIterable, Identifiable {
 
     var label: String {
         switch self {
-        case .out: return "熄灭"
-        case .ember: return "余烬"
-        case .hush: return "微火"
-        case .glow: return "小火"
-        case .crackle: return "中火"
-        case .roar: return "旺火"
-        case .blaze: return "烈火"
+        case .out: return L10n.t("phase.out")
+        case .ember: return L10n.t("phase.ember")
+        case .hush: return L10n.t("tier.hush")
+        case .glow: return L10n.t("tier.glow")
+        case .crackle: return L10n.t("tier.crackle")
+        case .roar: return L10n.t("tier.roar")
+        case .blaze: return L10n.t("tier.blaze")
         }
     }
 
@@ -147,7 +147,7 @@ struct FireTuning: Sendable {
 @MainActor
 final class FireStateMachine: ObservableObject {
     var snapshot: FireSnapshot {
-        previewStyle?.snapshot ?? liveSnapshot
+        customPreview ?? previewStyle?.snapshot ?? liveSnapshot
     }
 
     @Published private(set) var liveSnapshot: FireSnapshot = .extinguished
@@ -156,12 +156,13 @@ final class FireStateMachine: ObservableObject {
     /// Smoothed mix shown in console / flame (0…1 per source).
     @Published private(set) var displayedColorMix: FlameColorMix = .classic
     @Published var previewStyle: FirePreviewStyle? = nil
+    @Published private(set) var customPreview: FireSnapshot? = nil
     @Published var animationPaused: Bool = false
     @Published var reduceMotion: Bool = false
     /// Bumps when user edits source colors so the scene rebuilds ramps.
     @Published private(set) var colorPaletteEpoch: Int = 0
 
-    var isPreviewing: Bool { previewStyle != nil }
+    var isPreviewing: Bool { previewStyle != nil || customPreview != nil }
 
     private var tuning = FireTuning()
     private var recentInflows: [(date: Date, tokens: Double, source: UsageSource?)] = []
@@ -204,11 +205,46 @@ final class FireStateMachine: ObservableObject {
     }
 
     func showPreview(_ style: FirePreviewStyle) {
+        customPreview = nil
         previewStyle = style
+        objectWillChange.send()
+    }
+
+    func showCustomPreview(intensity: Double) {
+        let i = min(1, max(0, intensity))
+        previewStyle = nil
+        let tier: FireTier
+        switch i {
+        case ..<0.18: tier = .hush
+        case ..<0.35: tier = .glow
+        case ..<0.58: tier = .crackle
+        case ..<0.82: tier = .roar
+        default: tier = .blaze
+        }
+        let phase: FirePhase
+        if i < 0.02 {
+            phase = .out
+        } else if i < 0.08 {
+            phase = .ember
+        } else {
+            phase = .flame
+        }
+        customPreview = FireSnapshot(
+            intensity: phase == .ember || phase == .out ? 0 : i,
+            fuel: i,
+            emberHeat: phase == .ember ? 0.85 : max(0.2, i * 0.9),
+            phase: phase,
+            sparkBurst: i,
+            tier: tier,
+            colorMix: displayedColorMix
+        )
+        objectWillChange.send()
     }
 
     func returnToLive() {
         previewStyle = nil
+        customPreview = nil
+        objectWillChange.send()
     }
 
     func updateTodayTokens(_ tokens: Int, bySource: [UsageSource: Int] = [:]) {

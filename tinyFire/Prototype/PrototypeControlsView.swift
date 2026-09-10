@@ -11,13 +11,19 @@ struct PrototypeControlsView: View {
     @ObservedObject private var monitor: UsageMonitor
     @ObservedObject private var fire: FireStateMachine
     @ObservedObject private var languageStore = LanguageStore.shared
+    @ObservedObject private var simulator: UsageSimulator
     @State private var colorDraftEpoch: Int = 0
     @State private var editingColor: UsageSource?
+    @State private var showDebug = false
+    @State private var versionTapCount = 0
+    @State private var lastVersionTap: Date = .distantPast
+    @State private var debugIntensity: Double = 0.45
 
     init(store: AppModel) {
         self.store = store
         self.monitor = store.monitor
         self.fire = store.fire
+        self.simulator = store.simulator
     }
 
     var body: some View {
@@ -28,12 +34,17 @@ struct PrototypeControlsView: View {
                 colorsSection
                 sourcesSection
                 sizeSection
+                if showDebug {
+                    debugSection
+                }
                 Text(L10n.t("console.footnote"))
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 Text(String(format: L10n.t("console.version"), AppVersion.display))
                     .font(.caption2.monospacedDigit())
                     .foregroundStyle(.tertiary)
+                    .contentShape(Rectangle())
+                    .onTapGesture { handleVersionTap() }
             }
             .padding(22)
         }
@@ -41,6 +52,13 @@ struct PrototypeControlsView: View {
         .frame(minWidth: 460, minHeight: 680)
         .environment(\.locale, languageStore.language.locale ?? .autoupdatingCurrent)
         .id(languageStore.revision)
+        .onDisappear {
+            // Closing Console always re-hides debug for next open.
+            showDebug = false
+            versionTapCount = 0
+            fire.returnToLive()
+            simulator.setAutoBurn(false)
+        }
     }
 
     // MARK: - Header
@@ -367,25 +385,29 @@ struct PrototypeControlsView: View {
             get: { editingColor == source },
             set: { if !$0 { editingColor = nil } }
         )) {
-            VStack(alignment: .leading, spacing: 12) {
-                Text(source.displayName)
-                    .font(.headline)
-                ColorPicker(
-                    "",
-                    selection: Binding(
-                        get: { SourceFlameColors.color(for: source) },
-                        set: { newValue in
-                            SourceFlameColors.setAccent(for: source, color: newValue)
-                            colorDraftEpoch &+= 1
-                        }
-                    ),
-                    supportsOpacity: false
-                )
-                .labelsHidden()
-                .frame(width: 180, height: 120)
-            }
-            .padding(16)
+            colorEditor(for: source)
         }
+    }
+
+    private func colorEditor(for source: UsageSource) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(source.displayName)
+                .font(.headline)
+            ColorPicker(
+                "",
+                selection: Binding(
+                    get: { SourceFlameColors.color(for: source) },
+                    set: { newValue in
+                        SourceFlameColors.setAccent(for: source, color: newValue)
+                        colorDraftEpoch &+= 1
+                    }
+                ),
+                supportsOpacity: false
+            )
+            .labelsHidden()
+            .frame(width: 180, height: 120)
+        }
+        .padding(16)
     }
 
     // MARK: - Sources
@@ -451,31 +473,34 @@ struct PrototypeControlsView: View {
     private var sizeSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             sectionTitle(L10n.t("size.title"))
-            Picker("", selection: Binding(
-                get: { store.panel.flameSize },
-                set: { store.panel.setSize($0) }
-            )) {
-                ForEach(FlamePanelController.FlameSize.allCases) { size in
-                    Text(size.label).tag(size)
-                }
-            }
-            .labelsHidden()
-            .pickerStyle(.segmented)
 
             HStack(spacing: 16) {
                 ForEach(FlamePanelController.FlameSize.allCases) { size in
-                    VStack(spacing: 6) {
-                        RoundedRectangle(cornerRadius: 6, style: .continuous)
-                            .fill(Color.orange.opacity(store.panel.flameSize == size ? 0.85 : 0.25))
-                            .frame(
-                                width: 12 + size.pixelScale * 6,
-                                height: 14 + size.pixelScale * 7
-                            )
-                        Text(size.label)
-                            .font(.caption2)
-                            .foregroundStyle(store.panel.flameSize == size ? .primary : .secondary)
+                    Button {
+                        store.panel.setSize(size)
+                    } label: {
+                        VStack(spacing: 6) {
+                            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                .fill(Color.orange.opacity(store.panel.flameSize == size ? 0.85 : 0.25))
+                                .frame(
+                                    width: 12 + size.pixelScale * 6,
+                                    height: 14 + size.pixelScale * 7
+                                )
+                            Text(size.label)
+                                .font(.caption2)
+                                .foregroundStyle(store.panel.flameSize == size ? .primary : .secondary)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 8)
+                        .background(
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .fill(store.panel.flameSize == size
+                                      ? Color.orange.opacity(0.12)
+                                      : Color.clear)
+                        )
+                        .contentShape(Rectangle())
                     }
-                    .frame(maxWidth: .infinity)
+                    .buttonStyle(.plain)
                 }
             }
             .padding(.top, 4)
@@ -486,6 +511,159 @@ struct PrototypeControlsView: View {
         }
         .padding(16)
         .background(cardBackground)
+    }
+
+    // MARK: - Debug (10× version tap)
+
+    private var debugSection: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            sectionTitle(L10n.t("debug.title"))
+            Text(L10n.t("debug.hint"))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            Text(L10n.t("debug.intensity"))
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+
+            LazyVGrid(
+                columns: [GridItem(.adaptive(minimum: 72), spacing: 8)],
+                spacing: 8
+            ) {
+                ForEach(FirePreviewStyle.allCases) { style in
+                    Button {
+                        fire.showPreview(style)
+                        debugIntensity = style.snapshot.intensity
+                    } label: {
+                        Text(style.label)
+                            .font(.caption.weight(.medium))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 8)
+                            .background(
+                                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                    .fill(fire.previewStyle == style
+                                          ? Color.orange.opacity(0.85)
+                                          : Color.primary.opacity(0.06))
+                            )
+                            .foregroundStyle(fire.previewStyle == style ? .white : .primary)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    Text(String(format: "%.0f%%", debugIntensity * 100))
+                        .font(.caption.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Button(L10n.t("debug.live")) {
+                        fire.returnToLive()
+                    }
+                    .font(.caption.weight(.semibold))
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.orange)
+                }
+                Slider(
+                    value: Binding(
+                        get: { debugIntensity },
+                        set: { value in
+                            debugIntensity = value
+                            applyDebugIntensity(value)
+                        }
+                    ),
+                    in: 0...1
+                )
+                .tint(.orange)
+            }
+
+            Text(L10n.t("debug.inject"))
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+            HStack(spacing: 8) {
+                ForEach(UsageSimulator.Preset.allCases) { preset in
+                    Button(preset.label) { simulator.add(preset) }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                }
+            }
+
+            Toggle(L10n.t("debug.autoBurn"), isOn: Binding(
+                get: { simulator.autoBurnEnabled },
+                set: { simulator.setAutoBurn($0) }
+            ))
+            Toggle(L10n.t("debug.pause"), isOn: $fire.animationPaused)
+
+            Text(L10n.t("colors.title"))
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+            LazyVGrid(
+                columns: [GridItem(.adaptive(minimum: 100), spacing: 8)],
+                spacing: 8
+            ) {
+                ForEach(UsageSource.allCases) { source in
+                    Button {
+                        editingColor = source
+                    } label: {
+                        HStack(spacing: 6) {
+                            Circle()
+                                .fill(SourceFlameColors.color(for: source))
+                                .frame(width: 14, height: 14)
+                            Text(source.displayName)
+                                .font(.caption2)
+                                .lineLimit(1)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(8)
+                        .background(
+                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                .fill(Color.primary.opacity(0.05))
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .popover(isPresented: Binding(
+                        get: { editingColor == source },
+                        set: { if !$0 { editingColor = nil } }
+                    )) {
+                        colorEditor(for: source)
+                    }
+                }
+            }
+            Button(L10n.t("colors.reset")) {
+                SourceFlameColors.resetAll()
+                colorDraftEpoch &+= 1
+            }
+            .font(.caption)
+            .buttonStyle(.plain)
+            .foregroundStyle(.secondary)
+        }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(Color.orange.opacity(0.08))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .strokeBorder(Color.orange.opacity(0.22), lineWidth: 1)
+                )
+        )
+    }
+
+    private func handleVersionTap() {
+        let now = Date()
+        if now.timeIntervalSince(lastVersionTap) > 1.2 {
+            versionTapCount = 0
+        }
+        lastVersionTap = now
+        versionTapCount += 1
+        if versionTapCount >= 10 {
+            showDebug = true
+            versionTapCount = 0
+            debugIntensity = fire.snapshot.intensity
+        }
+    }
+
+    private func applyDebugIntensity(_ value: Double) {
+        fire.showCustomPreview(intensity: value)
     }
 
     // MARK: - Chrome
