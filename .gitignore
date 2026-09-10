@@ -1,0 +1,13 @@
+.build/
+dist/
+releases/*.dmg
+DerivedData/
+*.xcuserstate
+xcuserdata/
+.DS_Store
+backend/
+branding/TinyFire.iconset/
+*.log
+.venv/
+# Local-only update endpoint (keeps Cloudflare URL off the public repo)
+tinyFire/UpdateEndpoint.plist
