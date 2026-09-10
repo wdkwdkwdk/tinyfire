@@ -14,22 +14,39 @@ struct tinyFireApp: App {
 
     var body: some Scene {
         MenuBarExtra {
-            MenuBarContent(store: store)
-        } label: {
-            Label {
-                Text(L10n.t("app.name"))
-            } icon: {
-                Image("MenuBarIcon")
-                    .resizable()
-                    .interpolation(.high)
-                    .frame(width: 18, height: 18)
+            // Keep menu content flat — Group / .id / heavy modifiers can gray-out items.
+            Button(store.panel.isVisible ? L10n.t("menu.hideFlame") : L10n.t("menu.showFlame")) {
+                store.panel.toggleVisible()
             }
-            .id(languageStore.revision)
+            Button(L10n.t("menu.resetPosition")) {
+                store.panel.resetPositionToDefault()
+                store.igniteDemoFlameIfNeeded()
+            }
+            Button(L10n.t("menu.openConsole")) {
+                openConsoleWindow()
+            }
+            Divider()
+            Button(store.fire.animationPaused ? L10n.t("menu.resumeAnimation") : L10n.t("menu.pauseAnimation")) {
+                store.fire.animationPaused.toggle()
+            }
+            Divider()
+            Button(L10n.t("menu.quit")) {
+                NSApp.terminate(nil)
+            }
+        } label: {
+            Image("MenuBarIcon")
+                .resizable()
+                .interpolation(.high)
+                .frame(width: 18, height: 18)
+                .accessibilityLabel(L10n.t("app.name"))
         }
+        .menuBarExtraStyle(.menu)
 
         Window(L10n.t("console.title"), id: "prototype") {
             PrototypeControlsView(store: store)
                 .environment(\.locale, languageStore.language.locale ?? .autoupdatingCurrent)
+                .id(languageStore.revision)
+                .background(ConsoleOpenBridge(store: store))
         }
         .defaultSize(width: 460, height: 720)
 
@@ -69,42 +86,40 @@ struct tinyFireApp: App {
     }
 }
 
-private struct MenuBarContent: View {
-    @ObservedObject var store: AppModel
-    @ObservedObject private var languageStore = LanguageStore.shared
+@MainActor
+func openConsoleWindow() {
+    NSApp.activate(ignoringOtherApps: true)
+    // Prefer existing console window; otherwise ask SwiftUI to open it.
+    if let existing = NSApp.windows.first(where: { $0.identifier?.rawValue == "prototype" || $0.title.contains("Console") || $0.title.contains("控制台") || $0.title.contains("コンソール") || $0.title.contains("콘솔") }) {
+        existing.makeKeyAndOrderFront(nil)
+        return
+    }
+    NotificationCenter.default.post(name: .openTinyFireConsole, object: nil)
+}
+
+extension Notification.Name {
+    static let openTinyFireConsole = Notification.Name("tinyFire.openConsole")
+}
+
+/// Bridges notification → SwiftUI openWindow for MenuBarExtra (no Environment needed).
+private struct ConsoleOpenBridge: View {
     @Environment(\.openWindow) private var openWindow
+    @ObservedObject var store: AppModel
 
     var body: some View {
-        Group {
-            Button(store.panel.isVisible ? L10n.t("menu.hideFlame") : L10n.t("menu.showFlame")) {
-                store.panel.toggleVisible()
-            }
-            Button(L10n.t("menu.resetPosition")) {
-                store.panel.resetPositionToDefault()
-                store.igniteDemoFlameIfNeeded()
-            }
-            Button(L10n.t("menu.openConsole")) {
+        Color.clear
+            .frame(width: 0, height: 0)
+            .onReceive(NotificationCenter.default.publisher(for: .openTinyFireConsole)) { _ in
                 openWindow(id: "prototype")
                 NSApp.activate(ignoringOtherApps: true)
             }
-            Divider()
-            Button(store.fire.animationPaused ? L10n.t("menu.resumeAnimation") : L10n.t("menu.pauseAnimation")) {
-                store.fire.animationPaused.toggle()
+            .onAppear {
+                if !store.hasOpenedPrototypeOnce {
+                    store.hasOpenedPrototypeOnce = true
+                    openWindow(id: "prototype")
+                    NSApp.activate(ignoringOtherApps: true)
+                }
             }
-            Divider()
-            Button(L10n.t("menu.quit")) {
-                NSApp.terminate(nil)
-            }
-        }
-        .environment(\.locale, languageStore.language.locale ?? .autoupdatingCurrent)
-        .id(languageStore.revision)
-        .onAppear {
-            if !store.hasOpenedPrototypeOnce {
-                store.hasOpenedPrototypeOnce = true
-                openWindow(id: "prototype")
-                NSApp.activate(ignoringOtherApps: true)
-            }
-        }
     }
 }
 
@@ -129,6 +144,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             store.startDataPipeline()
             store.panel.showFront()
             UpdateChecker.checkOnLaunch()
+            // Open console once via notification after scenes are ready.
+            if !store.hasOpenedPrototypeOnce {
+                store.hasOpenedPrototypeOnce = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    NotificationCenter.default.post(name: .openTinyFireConsole, object: nil)
+                }
+            }
         }
     }
 

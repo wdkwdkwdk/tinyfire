@@ -35,6 +35,21 @@ xcodebuild \
 SRC_APP="$DERIVED/Build/Products/Release/$PRODUCT_APP"
 test -d "$SRC_APP"
 
+# Embed private update endpoint when present (gitignored locally).
+ENDPOINT_PLIST="$ROOT/tinyFire/UpdateEndpoint.plist"
+if [[ -f "$ENDPOINT_PLIST" ]]; then
+  mkdir -p "$SRC_APP/Contents/Resources"
+  cp "$ENDPOINT_PLIST" "$SRC_APP/Contents/Resources/UpdateEndpoint.plist"
+fi
+
+# Sanity: refuse to ship if marketing version didn't land in the binary.
+BUILT_VER="$(defaults read "$SRC_APP/Contents/Info" CFBundleShortVersionString)"
+echo "==> Built app version: ${BUILT_VER}"
+if [[ "$BUILT_VER" != "$VERSION" ]]; then
+  echo "ERROR: expected marketing version ${VERSION}, got ${BUILT_VER}" >&2
+  exit 1
+fi
+
 echo "==> Staging DMG contents..."
 mkdir -p "$STAGE"
 # Copy out of iCloud-derived path into /tmp stage
