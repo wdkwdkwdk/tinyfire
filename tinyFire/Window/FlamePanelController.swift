@@ -153,6 +153,7 @@ final class FlamePanelController: NSObject, ObservableObject {
             paused: store.fire.animationPaused,
             accentEpoch: store.fire.colorPaletteEpoch
         )
+        store.audio.sync(snapshot: snap, panelVisible: isVisible)
         lastAppliedSnapshot = snap
         if isHoveringFlame {
             let now = ProcessInfo.processInfo.systemUptime

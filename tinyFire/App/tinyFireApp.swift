@@ -48,6 +48,10 @@ struct tinyFireApp: App {
                     get: { store.fire.reduceMotion },
                     set: { store.fire.reduceMotion = $0 }
                 ))
+                Toggle(L10n.t("sound.enabled"), isOn: Binding(
+                    get: { store.audio.isEnabled },
+                    set: { store.audio.isEnabled = $0 }
+                ))
                 Text(L10n.t("settings.privacy"))
                     .font(.caption)
                     .foregroundStyle(.secondary)

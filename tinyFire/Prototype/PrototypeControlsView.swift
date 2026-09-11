@@ -34,6 +34,7 @@ struct PrototypeControlsView: View {
                 colorsSection
                 sourcesSection
                 sizeSection
+                soundSection
                 if showDebug {
                     debugSection
                 }
@@ -521,6 +522,50 @@ struct PrototypeControlsView: View {
             .padding(.top, 4)
 
             Text(L10n.t("size.hint"))
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .padding(16)
+        .background(cardBackground)
+    }
+
+    // MARK: - Sound
+
+    private var soundSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            sectionTitle(L10n.t("sound.title"))
+
+            Toggle(isOn: Binding(
+                get: { store.audio.isEnabled },
+                set: { store.audio.isEnabled = $0 }
+            )) {
+                Text(L10n.t("sound.enabled"))
+                    .font(.subheadline)
+            }
+            .toggleStyle(.switch)
+
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    Text(L10n.t("sound.volume"))
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Text("\(Int((store.audio.volume * 100).rounded()))%")
+                        .font(.caption.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                }
+                Slider(
+                    value: Binding(
+                        get: { store.audio.volume },
+                        set: { store.audio.volume = $0 }
+                    ),
+                    in: 0...1
+                )
+                .disabled(!store.audio.isEnabled)
+                .opacity(store.audio.isEnabled ? 1 : 0.45)
+            }
+
+            Text(L10n.t("sound.hint"))
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
