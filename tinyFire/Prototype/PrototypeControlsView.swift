@@ -72,7 +72,7 @@ struct PrototypeControlsView: View {
     private var header: some View {
         HStack(alignment: .top) {
             HStack(alignment: .center, spacing: 12) {
-                Image("MenuBarIcon")
+                Image("BrandMark")
                     .resizable()
                     .interpolation(.high)
                     .frame(width: 44, height: 44)

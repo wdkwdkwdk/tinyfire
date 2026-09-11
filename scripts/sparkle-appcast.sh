@@ -102,6 +102,24 @@ echo "==> Generating appcast for v${VERSION}..."
 
 test -f "$STAGING/$FEED_NAME"
 
+# generate_appcast applies --download-url-prefix to every enclosure; rewrite
+# TinyFire-x.y.z.dmg URLs so each version points at its own GitHub release.
+python3 - <<'PY' "$STAGING/$FEED_NAME"
+import re, sys
+from pathlib import Path
+path = Path(sys.argv[1])
+text = path.read_text()
+def fix(m):
+    ver = m.group(1)
+    return f"https://github.com/wdkwdkwdk/tinyfire/releases/download/v{ver}/TinyFire-{ver}.dmg"
+text = re.sub(
+    r"https://github.com/wdkwdkwdk/tinyfire/releases/download/v[^/\"]+/TinyFire-(\d+\.\d+\.\d+)\.dmg",
+    fix,
+    text,
+)
+path.write_text(text)
+PY
+
 if [[ -d "$BACKEND_PUBLIC" ]]; then
   cp "$STAGING/$FEED_NAME" "$BACKEND_PUBLIC/$FEED_NAME"
   echo "==> Copied appcast → backend/public/$FEED_NAME"
@@ -112,6 +130,10 @@ fi
 echo ""
 echo "Done:"
 echo "  $STAGING/$FEED_NAME"
-echo "  Enclosure prefix: $DOWNLOAD_PREFIX"
+echo "  Enclosure prefix (new items / deltas): $DOWNLOAD_PREFIX"
+if compgen -G "$STAGING/*.delta" > /dev/null; then
+  echo "  Delta updates (upload with the GitHub release):"
+  ls -1 "$STAGING"/*.delta | sed 's|^|    |'
+fi
 echo "Deploy with: cd backend && npx wrangler deploy"
 echo "Verify: curl -sS https://tinyfire.createfun.ai/appcast.xml | head"

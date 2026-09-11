@@ -18,6 +18,7 @@ struct tinyFireApp: App {
             MenuBarCommands(store: store)
         } label: {
             Image("MenuBarIcon")
+                .renderingMode(.template)
                 .resizable()
                 .interpolation(.high)
                 .frame(width: 18, height: 18)

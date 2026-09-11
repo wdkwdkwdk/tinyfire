@@ -11,7 +11,7 @@ Nothing is uploaded for usage tracking. Logs stay on your Mac.
 
 ## Download
 
-[**TinyFire-1.1.7.dmg**](https://github.com/wdkwdkwdk/tinyfire/releases/download/v1.1.7/TinyFire-1.1.7.dmg) — macOS 14+, Apple Silicon · Developer ID + notarized
+[**TinyFire-1.1.8.dmg**](https://github.com/wdkwdkwdk/tinyfire/releases/download/v1.1.8/TinyFire-1.1.8.dmg) — macOS 14+, Apple Silicon · Developer ID + notarized
 ## Features
 
 - Floating pixel campfire on the desktop (draggable, hideable, non-activating)
