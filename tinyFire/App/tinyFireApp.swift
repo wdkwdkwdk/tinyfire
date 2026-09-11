@@ -14,31 +14,15 @@ struct tinyFireApp: App {
 
     var body: some Scene {
         MenuBarExtra {
-            // Keep menu content flat — Group / .id / heavy modifiers can gray-out items.
-            Button(store.panel.isVisible ? L10n.t("menu.hideFlame") : L10n.t("menu.showFlame")) {
-                store.panel.toggleVisible()
-            }
-            Button(L10n.t("menu.resetPosition")) {
-                store.panel.resetPositionToDefault()
-                store.igniteDemoFlameIfNeeded()
-            }
-            Button(L10n.t("menu.openConsole")) {
-                openConsoleWindow()
-            }
-            Divider()
-            Button(store.fire.animationPaused ? L10n.t("menu.resumeAnimation") : L10n.t("menu.pauseAnimation")) {
-                store.fire.animationPaused.toggle()
-            }
-            Divider()
-            Button(L10n.t("menu.quit")) {
-                NSApp.terminate(nil)
-            }
+            // Flat menu + Environment(\.openWindow). Avoid Group/.id wrappers (they gray items out).
+            MenuBarCommands(store: store)
         } label: {
             Image("MenuBarIcon")
                 .resizable()
                 .interpolation(.high)
                 .frame(width: 18, height: 18)
                 .accessibilityLabel(L10n.t("app.name"))
+                .background(OpenWindowBinder())
         }
         .menuBarExtraStyle(.menu)
 
@@ -46,7 +30,6 @@ struct tinyFireApp: App {
             PrototypeControlsView(store: store)
                 .environment(\.locale, languageStore.language.locale ?? .autoupdatingCurrent)
                 .id(languageStore.revision)
-                .background(ConsoleOpenBridge(store: store))
         }
         .defaultSize(width: 460, height: 720)
 
@@ -86,41 +69,96 @@ struct tinyFireApp: App {
     }
 }
 
-@MainActor
-func openConsoleWindow() {
-    NSApp.activate(ignoringOtherApps: true)
-    // Prefer existing console window; otherwise ask SwiftUI to open it.
-    if let existing = NSApp.windows.first(where: { $0.identifier?.rawValue == "prototype" || $0.title.contains("Console") || $0.title.contains("控制台") || $0.title.contains("コンソール") || $0.title.contains("콘솔") }) {
-        existing.makeKeyAndOrderFront(nil)
-        return
-    }
-    NotificationCenter.default.post(name: .openTinyFireConsole, object: nil)
-}
+// MARK: - Menu bar
 
-extension Notification.Name {
-    static let openTinyFireConsole = Notification.Name("tinyFire.openConsole")
-}
-
-/// Bridges notification → SwiftUI openWindow for MenuBarExtra (no Environment needed).
-private struct ConsoleOpenBridge: View {
-    @Environment(\.openWindow) private var openWindow
+private struct MenuBarCommands: View {
     @ObservedObject var store: AppModel
+    @Environment(\.openWindow) private var openWindow
+
+    var body: some View {
+        Button(store.panel.isVisible ? L10n.t("menu.hideFlame") : L10n.t("menu.showFlame")) {
+            store.panel.toggleVisible()
+        }
+        Button(L10n.t("menu.resetPosition")) {
+            store.panel.resetPositionToDefault()
+            store.igniteDemoFlameIfNeeded()
+        }
+        Button(L10n.t("menu.openConsole")) {
+            ConsoleWindowOpener.open(using: openWindow)
+        }
+        Divider()
+        Button(store.fire.animationPaused ? L10n.t("menu.resumeAnimation") : L10n.t("menu.pauseAnimation")) {
+            store.fire.animationPaused.toggle()
+        }
+        Divider()
+        Button(L10n.t("menu.quit")) {
+            NSApp.terminate(nil)
+        }
+    }
+}
+
+/// Lives on the always-visible menu bar label so `openWindow` is bound at launch.
+private struct OpenWindowBinder: View {
+    @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         Color.clear
             .frame(width: 0, height: 0)
-            .onReceive(NotificationCenter.default.publisher(for: .openTinyFireConsole)) { _ in
-                openWindow(id: "prototype")
-                NSApp.activate(ignoringOtherApps: true)
-            }
-            .onAppear {
-                if !store.hasOpenedPrototypeOnce {
-                    store.hasOpenedPrototypeOnce = true
-                    openWindow(id: "prototype")
-                    NSApp.activate(ignoringOtherApps: true)
-                }
-            }
+            .accessibilityHidden(true)
+            .onAppear { ConsoleWindowOpener.bind(openWindow) }
     }
+}
+
+// MARK: - Console window opening
+
+@MainActor
+enum ConsoleWindowOpener {
+    private static var openWindowAction: ((String) -> Void)?
+
+    static func bind(_ openWindow: OpenWindowAction) {
+        openWindowAction = { id in
+            openWindow(id: id)
+        }
+    }
+
+    /// Opens or focuses the console. Prefers an explicit `openWindow` from a View.
+    @discardableResult
+    static func open(using openWindow: OpenWindowAction? = nil) -> Bool {
+        NSApp.activate(ignoringOtherApps: true)
+
+        if let existing = findConsoleWindow() {
+            existing.makeKeyAndOrderFront(nil)
+            return true
+        }
+
+        if let openWindow {
+            openWindow(id: "prototype")
+            return true
+        }
+        if let openWindowAction {
+            openWindowAction("prototype")
+            return true
+        }
+        return false
+    }
+
+    static func findConsoleWindow() -> NSWindow? {
+        NSApp.windows.first { window in
+            if window.identifier?.rawValue == "prototype" { return true }
+            let title = window.title
+            return title == "Console"
+                || title == "控制台"
+                || title == "コンソール"
+                || title == "콘솔"
+                || title.contains("Console")
+                || title.contains("控制台")
+        }
+    }
+}
+
+@MainActor
+func openConsoleWindow() {
+    ConsoleWindowOpener.open()
 }
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
@@ -144,13 +182,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             store.startDataPipeline()
             store.panel.showFront()
             UpdateChecker.checkOnLaunch()
-            // Open console once via notification after scenes are ready.
+
+            // First-run: open console once MenuBarCommands has bound openWindow.
             if !store.hasOpenedPrototypeOnce {
                 store.hasOpenedPrototypeOnce = true
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                    NotificationCenter.default.post(name: .openTinyFireConsole, object: nil)
-                }
+                self.attemptFirstConsoleOpen(attempt: 0)
             }
+        }
+    }
+
+    private func attemptFirstConsoleOpen(attempt: Int) {
+        if ConsoleWindowOpener.open() {
+            return
+        }
+        guard attempt < 12 else { return }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in
+            self?.attemptFirstConsoleOpen(attempt: attempt + 1)
         }
     }
 
