@@ -40,6 +40,7 @@ struct PrototypeControlsView: View {
                 Text(L10n.t("console.footnote"))
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                footerLinks
                 Text(String(format: L10n.t("console.version"), AppVersion.display))
                     .font(.caption2.monospacedDigit())
                     .foregroundStyle(.tertiary)
@@ -103,6 +104,15 @@ struct PrototypeControlsView: View {
         case .japanese: return L10n.t("language.japanese")
         case .korean: return L10n.t("language.korean")
         }
+    }
+
+    private var footerLinks: some View {
+        HStack(spacing: 14) {
+            Link(L10n.t("console.website"), destination: URL(string: "https://tinyfire.createfun.ai/")!)
+            Link(L10n.t("console.contact"), destination: URL(string: "https://x.com/bulletonbible")!)
+        }
+        .font(.caption)
+        .tint(.secondary)
     }
 
     // MARK: - Stats
