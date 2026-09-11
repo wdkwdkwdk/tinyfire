@@ -205,6 +205,7 @@ enum L10n {
         "menu.showFlame": "Show Flame",
         "menu.resetPosition": "Reset Position",
         "menu.openConsole": "Open Console",
+        "menu.checkUpdates": "Check for Updates…",
         "menu.pauseAnimation": "Pause Animation",
         "menu.resumeAnimation": "Resume Animation",
         "menu.quit": "Quit TinyFire",
@@ -229,6 +230,8 @@ enum L10n {
         "update.message.short": "TinyFire %@ is available.\nYou have %@.",
         "update.later": "Later",
         "update.download": "Download",
+        "update.debugTitle": "Updates (Debug)",
+        "update.debugBody": "In-app updates run in Release builds only.",
     ]
 
     // MARK: - Chinese
@@ -287,6 +290,7 @@ enum L10n {
         "menu.showFlame": "显示火焰",
         "menu.resetPosition": "重置到右下角",
         "menu.openConsole": "打开控制台",
+        "menu.checkUpdates": "检查更新…",
         "menu.pauseAnimation": "暂停动画",
         "menu.resumeAnimation": "恢复动画",
         "menu.quit": "退出 TinyFire",
@@ -311,6 +315,8 @@ enum L10n {
         "update.message.short": "TinyFire %@ 已发布。\n当前版本 %@。",
         "update.later": "稍后",
         "update.download": "去下载",
+        "update.debugTitle": "更新（调试）",
+        "update.debugBody": "应用内自动更新仅在正式版中启用。",
     ]
 
     // MARK: - Japanese
@@ -369,6 +375,7 @@ enum L10n {
         "menu.showFlame": "炎を表示",
         "menu.resetPosition": "位置をリセット",
         "menu.openConsole": "コンソールを開く",
+        "menu.checkUpdates": "アップデートを確認…",
         "menu.pauseAnimation": "アニメ一時停止",
         "menu.resumeAnimation": "アニメ再開",
         "menu.quit": "TinyFire を終了",
@@ -393,6 +400,8 @@ enum L10n {
         "update.message.short": "TinyFire %@ が利用可能です。\n現在のバージョンは %@ です。",
         "update.later": "あとで",
         "update.download": "ダウンロード",
+        "update.debugTitle": "アップデート（デバッグ）",
+        "update.debugBody": "アプリ内アップデートはリリースビルドでのみ動作します。",
     ]
 
     // MARK: - Korean
@@ -451,6 +460,7 @@ enum L10n {
         "menu.showFlame": "불꽃 보이기",
         "menu.resetPosition": "위치 초기화",
         "menu.openConsole": "콘솔 열기",
+        "menu.checkUpdates": "업데이트 확인…",
         "menu.pauseAnimation": "애니메이션 일시정지",
         "menu.resumeAnimation": "애니메이션 재개",
         "menu.quit": "TinyFire 종료",
@@ -475,5 +485,7 @@ enum L10n {
         "update.message.short": "TinyFire %@ 을(를) 사용할 수 있습니다.\n현재 버전은 %@ 입니다.",
         "update.later": "나중에",
         "update.download": "다운로드",
+        "update.debugTitle": "업데이트 (디버그)",
+        "update.debugBody": "앱 내 자동 업데이트는 릴리스 빌드에서만 동작합니다.",
     ]
 }

@@ -6,5 +6,15 @@
 	<true/>
 	<key>CFBundleDisplayName</key>
 	<string>TinyFire</string>
+	<key>SUFeedURL</key>
+	<string>https://tinyfire.createfun.ai/appcast.xml</string>
+	<key>SUPublicEDKey</key>
+	<string>3jvJJLbB67g3lB8SU2fZxB7rQpA3Qc4nm7neAexBhpw=</string>
+	<key>SUEnableAutomaticChecks</key>
+	<true/>
+	<key>SUScheduledCheckInterval</key>
+	<integer>86400</integer>
+	<key>SUAllowsAutomaticUpdates</key>
+	<true/>
 </dict>
 </plist>

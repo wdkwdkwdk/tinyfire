@@ -1,7 +1,9 @@
 .build/
 dist/
+dist/sparkle/
 releases/*.dmg
 DerivedData/
+scripts/.sparkle-tools/
 *.xcuserstate
 xcuserdata/
 .DS_Store
@@ -11,3 +13,6 @@ branding/TinyFire.iconset/
 .venv/
 # Local-only update endpoint (keeps Cloudflare URL off the public repo)
 tinyFire/UpdateEndpoint.plist
+# Sparkle EdDSA private key — never commit
+secrets/
+scripts/.sparkle-tools/

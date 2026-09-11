@@ -41,6 +41,11 @@ struct PrototypeControlsView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 footerLinks
+                Button(L10n.t("menu.checkUpdates")) {
+                    UpdateChecker.checkForUpdates()
+                }
+                .buttonStyle(.link)
+                .font(.caption)
                 Text(String(format: L10n.t("console.version"), AppVersion.display))
                     .font(.caption2.monospacedDigit())
                     .foregroundStyle(.tertiary)

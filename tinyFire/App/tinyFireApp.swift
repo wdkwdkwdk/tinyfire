@@ -86,6 +86,9 @@ private struct MenuBarCommands: View {
         Button(L10n.t("menu.openConsole")) {
             ConsoleWindowOpener.open(using: openWindow)
         }
+        Button(L10n.t("menu.checkUpdates")) {
+            UpdateChecker.checkForUpdates()
+        }
         Divider()
         Button(store.fire.animationPaused ? L10n.t("menu.resumeAnimation") : L10n.t("menu.pauseAnimation")) {
             store.fire.animationPaused.toggle()

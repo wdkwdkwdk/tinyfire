@@ -11,15 +11,15 @@ Nothing is uploaded for usage tracking. Logs stay on your Mac.
 
 ## Download
 
-[**TinyFire-1.1.6.dmg**](https://github.com/wdkwdkwdk/tinyfire/releases/download/v1.1.6/TinyFire-1.1.6.dmg) — macOS 14+, Apple Silicon · Developer ID + notarized
+[**TinyFire-1.1.7.dmg**](https://github.com/wdkwdkwdk/tinyfire/releases/download/v1.1.7/TinyFire-1.1.7.dmg) — macOS 14+, Apple Silicon · Developer ID + notarized
 ## Features
 
 - Floating pixel campfire on the desktop (draggable, hideable, non-activating)
 - Hover card for today's tokens + per-source breakdown
-- Console: stats charts, flame colors, source status, size, language
+- Console: stats, flame colors, sources, size, language, website / developer links
 - Languages: English / 中文 / 日本語 / 한국어 (+ system)
 - Cursor usage prefers the official Dashboard API when a local token is available, otherwise falls back to local estimate
-- Optional update check on launch (endpoint configured privately by the maintainer)
+- In-app updates via Sparkle (Release builds); Debug skips update checks
 - Console debug panel (tap version 10×) and clickable flame-size previews
 
 ## Install from source
@@ -35,6 +35,7 @@ Package a DMG:
 ```bash
 ./scripts/make-dmg.sh
 # → dist/TinyFire-<version>.dmg
+# Then: ./scripts/sparkle-appcast.sh  → backend/public/appcast.xml
 ```
 
 ## Privacy
