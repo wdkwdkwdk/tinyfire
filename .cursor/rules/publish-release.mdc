@@ -45,9 +45,11 @@ Local-only (gitignored) Cloudflare Worker under `backend/`:
    - `DOWNLOAD_URL` (GitHub release asset URL)
    - `NOTES_EN` / `NOTES_ZH` / `NOTES_JA` / `NOTES_KO` (user-facing, no debug jargon)
 2. Deploy: `cd backend && npx wrangler deploy`
-3. Verify: `curl https://tinyfire-api.bullet-on-bible.workers.dev/version`
+3. Verify `https://tinyfire.createfun.ai/version` returns the new version (landing `/` Download button also reads this)
 
-Old installed apps poll this endpoint on launch and must see the new version so they show the update alert.
+Old installed apps poll `/version` on launch and must see the new version so they show the update alert.
+Do not break `/version` JSON when changing the marketing site on `/`.
+Custom domain: `tinyfire.createfun.ai` (Workers Custom Domain on zone `createfun.ai`).
 
 ## Do not
 
