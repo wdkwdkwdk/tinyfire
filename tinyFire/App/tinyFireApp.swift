@@ -132,22 +132,57 @@ enum ConsoleWindowOpener {
     /// Opens or focuses the console. Prefers an explicit `openWindow` from a View.
     @discardableResult
     static func open(using openWindow: OpenWindowAction? = nil) -> Bool {
+        // Menu-bar (accessory) apps need an explicit activation or SwiftUI windows
+        // often never order front after the status-item menu dismisses.
         NSApp.activate(ignoringOtherApps: true)
 
-        if let existing = findConsoleWindow() {
-            existing.makeKeyAndOrderFront(nil)
+        if let existing = usableConsoleWindow() {
+            present(existing)
             return true
         }
 
+        var didRequest = false
         if let openWindow {
             openWindow(id: "prototype")
-            return true
-        }
-        if let openWindowAction {
+            didRequest = true
+        } else if let openWindowAction {
             openWindowAction("prototype")
-            return true
+            didRequest = true
         }
-        return false
+
+        guard didRequest else { return false }
+
+        // SwiftUI creates the NSWindow asynchronously — chase it onto the screen.
+        DispatchQueue.main.async {
+            if let window = usableConsoleWindow() ?? findConsoleWindow() {
+                present(window)
+            }
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+            if let window = usableConsoleWindow() ?? findConsoleWindow() {
+                present(window)
+            }
+        }
+        return true
+    }
+
+    private static func present(_ window: NSWindow) {
+        if window.isMiniaturized {
+            window.deminiaturize(nil)
+        }
+        window.collectionBehavior.insert(.moveToActiveSpace)
+        window.makeKeyAndOrderFront(nil)
+        window.orderFrontRegardless()
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    /// Windows SwiftUI left behind after close are still in `NSApp.windows`
+    /// but not visible — reusing those makes "Open Console" look like a no-op.
+    private static func usableConsoleWindow() -> NSWindow? {
+        findConsoleWindow().flatMap { window in
+            if window.isVisible || window.isMiniaturized { return window }
+            return nil
+        }
     }
 
     static func findConsoleWindow() -> NSWindow? {
@@ -158,8 +193,6 @@ enum ConsoleWindowOpener {
                 || title == "控制台"
                 || title == "コンソール"
                 || title == "콘솔"
-                || title.contains("Console")
-                || title.contains("控制台")
         }
     }
 }
@@ -171,6 +204,12 @@ func openConsoleWindow() {
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Debug + Release share the same bundle id. Two copies → two menu icons
+        // and "Open Console" appears to do nothing when the other instance owns focus.
+        if activateExistingInstanceIfNeeded() {
+            return
+        }
+
         NSApp.setActivationPolicy(.accessory)
 
         // Clear a previously saved off-screen origin from early prototypes.
@@ -197,6 +236,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 self.attemptFirstConsoleOpen(attempt: 0)
             }
         }
+    }
+
+    /// Returns true if this launch should abort (another TinyFire is already running).
+    private func activateExistingInstanceIfNeeded() -> Bool {
+        guard let bundleID = Bundle.main.bundleIdentifier else { return false }
+        let others = NSRunningApplication.runningApplications(withBundleIdentifier: bundleID)
+            .filter { !$0.isTerminated && $0.processIdentifier != ProcessInfo.processInfo.processIdentifier }
+        guard let other = others.first else { return false }
+        other.activate(options: [.activateAllWindows, .activateIgnoringOtherApps])
+        // Best-effort: Apple Events won't open our SwiftUI window; user can use the
+        // already-running menu item. Just avoid a zombie second copy.
+        DispatchQueue.main.async {
+            NSApp.terminate(nil)
+        }
+        return true
     }
 
     private func attemptFirstConsoleOpen(attempt: Int) {
