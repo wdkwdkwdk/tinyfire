@@ -173,14 +173,23 @@ final class FlamePanelController: NSObject, ObservableObject {
         }
     }
 
-    /// Flame size drives the campfire; hover card stays a fixed 220pt card above it.
+    /// Flame size drives the campfire; hover card sits just above the visible fire, not the panel ceiling.
     private func layoutFlameChrome(hovering: Bool) {
         guard let panel, let skView, let summaryView else { return }
         let flame = flameSize.panelSize
         let cardW = HoverSummaryView.cardWidth
         let cardH = max(summaryView.intrinsicContentSize.height, 72)
         let pad: CGFloat = 8
-        let gap: CGFloat = 6
+        let gap: CGFloat = 8
+        let px = flameSize.pixelScale
+
+        // FireScene anchors the campfire near the bottom (anchorPoint.y = 0.28).
+        // A full fireH sprite tip estimate — card hugs that, instead of jumping to the panel top
+        // and leaving a huge empty gap above the visible flame.
+        let anchorY = flame.height * 0.28
+        let flameBaseY = CGFloat(PixelCampfireAtlas.logH) * px * 0.5 - 4 * px
+        let visualTipY = anchorY + max(0, flameBaseY) + CGFloat(PixelCampfireAtlas.fireH) * px * 0.62
+        let cardY = min(visualTipY + gap, flame.height + gap)
 
         let bottomCenterX = panel.frame.midX
         let bottomY = panel.frame.origin.y
@@ -189,7 +198,7 @@ final class FlamePanelController: NSObject, ObservableObject {
         let height: CGFloat
         if hovering {
             width = max(flame.width, cardW + pad * 2)
-            height = flame.height + cardH + gap + pad
+            height = max(flame.height, cardY + cardH + pad)
         } else {
             width = flame.width
             height = flame.height
@@ -213,7 +222,7 @@ final class FlamePanelController: NSObject, ObservableObject {
         if hovering {
             summaryView.frame = NSRect(
                 x: (width - cardW) / 2,
-                y: height - cardH - pad,
+                y: cardY,
                 width: cardW,
                 height: cardH
             )
