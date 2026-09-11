@@ -1,0 +1,56 @@
+---
+description: Publish a new TinyFire release (version bump, notarized DMG, GitHub, backend)
+alwaysApply: true
+---
+
+# TinyFire release checklist
+
+Whenever the user asks to publish / release a new version, do **all** of the following in order. Do not skip steps.
+
+## 1. Bump version
+
+In `tinyFire.xcodeproj/project.pbxproj` (Debug + Release):
+
+- `MARKETING_VERSION` → next semver (patch for fixes, minor for features)
+- `CURRENT_PROJECT_VERSION` → increment build integer
+
+## 2. Build notarized DMG
+
+```bash
+./scripts/make-dmg.sh
+```
+
+Requires Xcode signed into the paid Apple Developer team. Output: `dist/TinyFire-<version>.dmg` (Developer ID + notarized + stapled).
+
+## 3. Update GitHub repo text
+
+- `README.md` download link → only the **latest** DMG URL (remove older version links)
+- Commit releasable app/script changes (never commit `backend/`, `tinyFire/UpdateEndpoint.plist`, secrets, or `.p8` keys)
+- Push to `origin/main`
+
+## 4. GitHub Release
+
+- Create tag `v<version>` and release
+- Upload **only** `dist/TinyFire-<version>.dmg`
+- Optionally delete older releases/tags if the user wants a single latest release
+- Auth: `GH_TOKEN` from `git credential fill` for `github.com` if `gh` is not logged in
+
+## 5. Backend update notification
+
+Local-only (gitignored) Cloudflare Worker under `backend/`:
+
+1. Update `backend/wrangler.toml` `[vars]`:
+   - `LATEST_VERSION`
+   - `LATEST_BUILD`
+   - `DOWNLOAD_URL` (GitHub release asset URL)
+   - `NOTES_EN` / `NOTES_ZH` / `NOTES_JA` / `NOTES_KO` (user-facing, no debug jargon)
+2. Deploy: `cd backend && npx wrangler deploy`
+3. Verify: `curl https://tinyfire-api.bullet-on-bible.workers.dev/version`
+
+Old installed apps poll this endpoint on launch and must see the new version so they show the update alert.
+
+## Do not
+
+- Commit or push `backend/` or `UpdateEndpoint.plist`
+- Ship ad-hoc / unsigned builds
+- Leave README pointing at multiple old DMG links

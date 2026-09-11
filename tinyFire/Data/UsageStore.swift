@@ -314,6 +314,27 @@ final class UsageStore: @unchecked Sendable {
         sqlite3_step(stmt)
     }
 
+    /// True if any stored event originated from this log path.
+    func hasEvents(forFilePath path: String) -> Bool {
+        lock.lock(); defer { lock.unlock() }
+        var stmt: OpaquePointer?
+        defer { sqlite3_finalize(stmt) }
+        guard sqlite3_prepare_v2(
+            db,
+            "SELECT 1 FROM usage_events WHERE file_path = ? LIMIT 1;",
+            -1,
+            &stmt,
+            nil
+        ) == SQLITE_OK else { return false }
+        bindText(stmt, 1, path)
+        return sqlite3_step(stmt) == SQLITE_ROW
+    }
+
+    func clearFileCursors() {
+        lock.lock(); defer { lock.unlock() }
+        exec("DELETE FROM file_cursors;")
+    }
+
     func meta(_ key: String) -> String? {
         lock.lock(); defer { lock.unlock() }
         var stmt: OpaquePointer?

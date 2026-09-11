@@ -62,6 +62,7 @@ final class UsageMonitor: ObservableObject {
     func rescan() {
         didCompleteBaseline = false
         claudeBestTotal.removeAll()
+        store.clearFileCursors()
         reloadStatsFromStore()
         refreshSourceStatuses()
         enqueueScan(baseline: true)
@@ -93,28 +94,36 @@ final class UsageMonitor: ObservableObject {
 
             if wantCodex {
                 for file in CodexLogAdapter.discoverLogFiles(modifiedSince: fileSince) {
-                    collected.append(contentsOf: Self.readJSONLDetached(file: file, store: storeRef) {
+                    collected.append(contentsOf: Self.readJSONLDetached(
+                        file: file, store: storeRef, fromStart: baseline
+                    ) {
                         CodexLogAdapter.parseLine($0, file: file)
                     })
                 }
             }
             if wantClaude {
                 for file in ClaudeCodeLogAdapter.discoverLogFiles(modifiedSince: fileSince) {
-                    collected.append(contentsOf: Self.readJSONLDetached(file: file, store: storeRef) {
+                    collected.append(contentsOf: Self.readJSONLDetached(
+                        file: file, store: storeRef, fromStart: baseline
+                    ) {
                         ClaudeCodeLogAdapter.parseLine($0, file: file)
                     })
                 }
             }
             if wantGrok {
                 for file in GrokLogAdapter.discoverLogFiles(modifiedSince: fileSince) {
-                    collected.append(contentsOf: Self.readJSONLDetached(file: file, store: storeRef) {
+                    collected.append(contentsOf: Self.readJSONLDetached(
+                        file: file, store: storeRef, fromStart: baseline
+                    ) {
                         GrokLogAdapter.parseLine($0, file: file)
                     })
                 }
             }
             if wantPi {
                 for file in PiLogAdapter.discoverLogFiles(modifiedSince: fileSince) {
-                    collected.append(contentsOf: Self.readJSONLDetached(file: file, store: storeRef) {
+                    collected.append(contentsOf: Self.readJSONLDetached(
+                        file: file, store: storeRef, fromStart: baseline
+                    ) {
                         PiLogAdapter.parseLine($0, file: file)
                     })
                 }
@@ -196,9 +205,14 @@ final class UsageMonitor: ObservableObject {
     }
 
     /// Background-safe JSONL tail reader (UsageStore is lock-protected).
+    ///
+    /// - Baseline / `fromStart`: re-read from byte 0. Inserts are idempotent by event id.
+    /// - Incremental: seek to saved cursor. If the cursor is already at EOF but this path
+    ///   never produced any stored events, rewind (self-heal the "stuck at 0 tokens" case).
     nonisolated private static func readJSONLDetached(
         file: URL,
         store: UsageStore,
+        fromStart: Bool = false,
         parse: (String) -> UsageEvent?
     ) -> [UsageEvent] {
         let path = file.path
@@ -210,7 +224,10 @@ final class UsageMonitor: ObservableObject {
         let size = (attrs?[.size] as? NSNumber)?.uint64Value ?? 0
         var offset = cursor.offset
         var partial = cursor.partial ?? ""
-        if offset > size {
+
+        let truncated = offset > size
+        let stuckAtEOF = !fromStart && size > 0 && offset >= size && !store.hasEvents(forFilePath: path)
+        if fromStart || truncated || stuckAtEOF {
             offset = 0
             partial = ""
         }
