@@ -56,9 +56,11 @@ Requires Xcode signed into the paid Apple Developer team. Output: `dist/TinyFire
 ## 5. GitHub Release
 
 - Create tag `v<version>` and release
-- Upload **only** `dist/TinyFire-<version>.dmg` (asset name must match appcast enclosure)
+- Upload `dist/TinyFire-<version>.dmg` (asset name must match appcast enclosure)
+- Also upload any new `dist/sparkle/*.delta` files referenced by this version’s appcast item
 - Optionally delete older releases/tags if the user wants a single latest release
 - Auth: `GH_TOKEN` from `git credential fill` for `github.com` if `gh` is not logged in
+- After `sparkle-appcast.sh`, confirm older DMG enclosure URLs still point at their own `vX.Y.Z` release paths (script rewrites them)
 
 ## 6. Backend: `/version` + appcast deploy
 
