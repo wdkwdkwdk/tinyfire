@@ -114,13 +114,12 @@ final class FireplaceAudioController: ObservableObject {
         let heat = Self.heat(for: lastSnapshot)
         let master = (isEnabled && panelAudible) ? Float(volume) : 0
 
-        // Bed stays present; crackles stay occasional, not a constant tick track.
-        let bed = master * (0.40 + heat * 0.60)
-        // Mean seconds between crackles (higher = sparser).
-        // hush ~5–6s · mid ~3s · blaze ~1.6s
-        let tickGap = max(1.5, 5.8 - heat * 4.0)
-        // Rare louder sap pops.
-        let popBias = 0.04 + heat * 0.10
+        // Bed present; crackles sparse.
+        let bed = master * (0.38 + heat * 0.55)
+        // Mean seconds between crackles (exponential waits around this).
+        // 微火 ~10s · 中火 ~5s · 烈火 ~2s
+        let tickGap = max(2.0, 12.0 - heat * 10.0)
+        let popBias = 0.07 + heat * 0.14
         let activity = heat
 
         state.setTargets(bedGain: bed, tickGapSeconds: tickGap, popBias: popBias, activity: activity)
@@ -162,8 +161,8 @@ private final class AudioRenderState: @unchecked Sendable {
     private var hissLP: Float = 0
     private var flutterPhase: Float = 0
 
-    // Event scheduler (samples until next crackle attempt)
-    private var samplesUntilEvent: Int = 22_050
+    // Event scheduler (samples until next crackle attempt) — ~0.55s before first
+    private var samplesUntilEvent: Int = 24_000
     private var followUpsLeft: Int = 0
 
     // Active transient voices (up to 3 overlapping snaps)
@@ -213,35 +212,34 @@ private final class AudioRenderState: @unchecked Sendable {
             if flutterPhase > 1 { flutterPhase -= 1 }
             let flutter = 0.88 + 0.12 * sinf(flutterPhase * 2 * .pi)
 
-            var roar = brown * 4.5
+            var roar = brown * 4.2
             roarLP = roarLP * 0.97 + roar * 0.03
             roar = roarLP
 
-            var hiss = pink * 0.08
+            var hiss = pink * 0.07
             hissLP = hissLP * 0.86 + hiss * 0.14
-            hiss = hissLP * (0.35 + activity * 0.65)
+            hiss = hissLP * (0.30 + activity * 0.55)
 
-            let bed = (roar * 0.72 + hiss) * flutter * bedGain
+            let bed = (roar * 0.68 + hiss) * flutter * bedGain
 
-            // --- Scheduler: sparse, irregular crackles (quiet spells matter) ---
+            // --- Scheduler: occasional crackles with quiet spells ---
             if activity > 0.02 {
                 samplesUntilEvent -= 1
                 if samplesUntilEvent <= 0 {
                     triggerCrackle(isFollowUp: followUpsLeft > 0)
                     if followUpsLeft > 0 {
                         followUpsLeft -= 1
-                        // Loose double-tap only: 220–500 ms
-                        samplesUntilEvent = Int(9_700 + nextFloat() * 12_000)
+                        // Soft double: ~360–800 ms
+                        samplesUntilEvent = Int(16_000 + nextFloat() * 20_000)
                     } else {
                         scheduleNextGap()
-                        // Rare short echo (one follow-up), not a burst train.
-                        if nextFloat() < 0.06 + activity * 0.06 {
+                        if nextFloat() < 0.10 + activity * 0.08 {
                             followUpsLeft = 1
                         }
                     }
                 }
             } else {
-                samplesUntilEvent = max(samplesUntilEvent, 20_000)
+                samplesUntilEvent = max(samplesUntilEvent, 32_000)
                 followUpsLeft = 0
             }
 
@@ -249,21 +247,20 @@ private final class AudioRenderState: @unchecked Sendable {
             for v in 0..<voices.count {
                 crackle += voices[v].tick(white: white)
             }
-            // Soften residual edge before the bed mix.
-            crackle = crackle * 0.72
 
-            var sample = bed + crackle * (0.28 + activity * 0.22)
-            sample = tanhf(sample * 1.1)
+            // Loud enough to hear over the bed, without needle HF.
+            var sample = bed + crackle * (0.55 + activity * 0.35)
+            sample = tanhf(sample * 1.12)
             buffer[i] = sample
         }
     }
 
     private func scheduleNextGap() {
-        // Exponential waits with a longer floor so it never machine-guns.
-        let mean = max(1.4, tickGap)
+        let mean = max(2.0, tickGap)
         let u = max(0.0001, nextFloat())
         let seconds = -logf(u) * mean
-        let clamped = min(14.0, max(0.9, seconds))
+        // Floor ~1.1s; cap ~16s so waits aren't endless.
+        let clamped = min(16.0, max(1.1, seconds))
         samplesUntilEvent = Int(clamped * 44_100)
     }
 
@@ -274,20 +271,20 @@ private final class AudioRenderState: @unchecked Sendable {
 
         let bigPop = !isFollowUp && nextFloat() < popBias
         if bigPop {
-            // Soft low thump — muted, woody, not a slap.
+            // Woody pop — warmer body, moderate presence.
             voices[idx].trigger(
-                amplitude: 0.35 + nextFloat() * 0.25,
-                decay: 0.994 + nextFloat() * 0.003,
-                brightness: 0.18 + nextFloat() * 0.14,
-                thump: 0.65 + nextFloat() * 0.25
+                amplitude: 0.55 + nextFloat() * 0.35,
+                decay: 0.990 + nextFloat() * 0.005,
+                brightness: 0.32 + nextFloat() * 0.18,
+                thump: 0.50 + nextFloat() * 0.30
             )
         } else {
-            // Soft ember tick — mid warmth, little HF bite.
+            // Soft mid crackle — audible, not a HF tick.
             voices[idx].trigger(
-                amplitude: 0.16 + nextFloat() * 0.22,
-                decay: 0.978 + nextFloat() * 0.012,
-                brightness: 0.22 + nextFloat() * 0.18,
-                thump: 0.15 + nextFloat() * 0.20
+                amplitude: 0.32 + nextFloat() * 0.32,
+                decay: 0.968 + nextFloat() * 0.018,
+                brightness: 0.38 + nextFloat() * 0.22,
+                thump: 0.22 + nextFloat() * 0.22
             )
         }
     }
@@ -336,19 +333,18 @@ private struct CrackleVoice {
             return 0
         }
 
-        // Warm burst: mostly mid/low body, gentle high-pass (no needle snap).
+        // Mid-focused crackle: some bite, rolled-off extremes.
         let one: Float = 1
         let shaped: Float = white * brightness + (one - brightness) * lp
-        lp = lp * 0.88 + white * 0.12
+        lp = lp * 0.84 + white * 0.16
         let prev: Float = hp
         hp = shaped
-        // Weaker differentiator → less sizzle.
-        let high: Float = (hp - prev * 0.55) * 0.45
+        // Moderate differentiator — present, not a needle.
+        let high: Float = (hp - prev * 0.72) * 0.85
 
-        let body: Float = lp * (0.55 + thump * 1.2)
-        // Soft attack — no hard transient spike.
-        let attack: Float = env > 0.85 ? 1.08 : 1.0
-        let snap: Float = high + body
+        let body: Float = lp * (0.70 + thump * 1.1)
+        let attack: Float = env > 0.8 ? 1.18 : 1.0
+        let snap: Float = high * 1.05 + body
         let out: Float = snap * env * amp * attack
         return out
     }
