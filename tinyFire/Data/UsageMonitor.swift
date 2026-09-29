@@ -82,6 +82,7 @@ final class UsageMonitor: ObservableObject {
         let wantGrok = status(for: .grok)?.state == .ok
         let wantPi = status(for: .pi)?.state == .ok
         let wantAmp = status(for: .amp)?.state == .ok
+        let wantDeepSeek = status(for: .deepseek)?.state == .ok
         let knownCursorLocal = wantCursor ? store.eventIDs(withPrefix: "cursor:bubble:v2:") : []
         let knownCursorDash = wantCursor ? store.eventIDs(withPrefix: "cursor:dash:") : []
         let storeRef = store
@@ -133,6 +134,13 @@ final class UsageMonitor: ObservableObject {
                     collected.append(contentsOf: AmpLogAdapter.parseThread(file: file))
                 }
             }
+            if wantDeepSeek {
+                for file in DeepSeekLogAdapter.discoverSessionFiles(modifiedSince: fileSince) {
+                    collected.append(contentsOf: DeepSeekLogAdapter.ingest(
+                        file: file, store: storeRef, fromStart: baseline
+                    ))
+                }
+            }
             if wantCursor {
                 let result = CursorLogAdapter.poll(
                     watermarkMS: watermark,
@@ -160,7 +168,8 @@ final class UsageMonitor: ObservableObject {
                     .cursor: wantCursor,
                     .grok: wantGrok,
                     .pi: wantPi,
-                    .amp: wantAmp
+                    .amp: wantAmp,
+                    .deepseek: wantDeepSeek
                 ],
                 isBaseline: baseline
             )
@@ -304,7 +313,8 @@ final class UsageMonitor: ObservableObject {
             (.cursor, cursorConn),
             (.grok, GrokLogAdapter.connectionState()),
             (.pi, PiLogAdapter.connectionState()),
-            (.amp, AmpLogAdapter.connectionState())
+            (.amp, AmpLogAdapter.connectionState()),
+            (.deepseek, DeepSeekLogAdapter.connectionState())
         ]
         statuses = pairs.map { source, state in
             SourceStatus(

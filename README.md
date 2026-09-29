@@ -3,7 +3,7 @@
 > If you're burning tokens anyway, light a real fire.  
 > 既然都在烧 token，不如真的生一把火。
 
-TinyFire is a floating macOS campfire driven by your local AI coding-tool token usage. Codex, Claude Code, Cursor, Grok, Pi, Amp — as you burn tokens, the fire grows; when you stop, it settles into embers.
+TinyFire is a floating macOS campfire driven by your local AI coding-tool token usage. Codex, Claude Code, Cursor, Grok, Pi, Amp, DeepSeek Harness — as you burn tokens, the fire grows; when you stop, it settles into embers.
 
 Nothing is uploaded for usage tracking. Logs stay on your Mac.
 
@@ -11,7 +11,7 @@ Nothing is uploaded for usage tracking. Logs stay on your Mac.
 
 ## Download
 
-[**TinyFire-1.1.16.dmg**](https://github.com/wdkwdkwdk/tinyfire/releases/download/v1.1.16/TinyFire-1.1.16.dmg)
+[**TinyFire-1.1.17.dmg**](https://github.com/wdkwdkwdk/tinyfire/releases/download/v1.1.17/TinyFire-1.1.17.dmg)
 
 ## Features
 

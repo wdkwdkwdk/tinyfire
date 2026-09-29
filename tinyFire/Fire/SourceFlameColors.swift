@@ -20,6 +20,7 @@ enum SourceFlameColors {
         .grok: (0.72, 0.42, 0.95),       // violet
         .pi: (0.95, 0.62, 0.22),         // amber
         .amp: (0.20, 0.78, 0.78),        // teal
+        .deepseek: (0.18, 0.42, 0.88),   // deep blue
     ]
 
     static func accent(for source: UsageSource) -> (r: Double, g: Double, b: Double) {

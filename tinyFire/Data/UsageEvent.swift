@@ -12,6 +12,7 @@ enum UsageSource: String, Codable, CaseIterable, Identifiable {
     case grok = "grok"
     case pi = "pi"
     case amp = "amp"
+    case deepseek = "deepseek"
 
     var id: String { rawValue }
 
@@ -24,6 +25,7 @@ enum UsageSource: String, Codable, CaseIterable, Identifiable {
         case .grok: return "Grok"
         case .pi: return "Pi"
         case .amp: return "Amp"
+        case .deepseek: return "DeepSeek"
         }
     }
 }

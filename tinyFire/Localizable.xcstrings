@@ -492,13 +492,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Reads local Codex, Claude Code, Cursor, Grok, Pi, and Amp usage logs. Nothing is uploaded."
+            "value" : "Reads local Codex, Claude Code, Cursor, Grok, Pi, Amp, and DeepSeek usage logs. Nothing is uploaded."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "读取本机 Codex / Claude Code / Cursor / Grok / Pi / Amp 用量日志；不上传。"
+            "value" : "读取本机 Codex / Claude Code / Cursor / Grok / Pi / Amp / DeepSeek 用量日志；不上传。"
           }
         }
       }
